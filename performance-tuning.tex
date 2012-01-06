@@ -55,6 +55,8 @@
       \pause
     \item Understand your environment. Know what to measure.
       \pause
+    \item Round pegs for round holes. Use appropriate tools.
+      \pause
     \item Jumps places, unlike functional bugs, look beyond local impact.
       \pause
     \item Requires mechanical approach, attack worst problem first.
@@ -85,7 +87,7 @@
   \tableofcontents
 \end{frame}
 
-\section{The problem}
+\section{Problem}
 
 \subsection{Identify scope}
 
@@ -106,7 +108,7 @@
   \end{itemize}
 \end{frame}
 
-\subsection{How to fix it}
+\subsection{Acceptance criteria}
 
 \begin{frame}{Benchmark}
   \begin{itemize}
@@ -127,6 +129,10 @@
     \small{Know your end goal.}
   \end{center}
 \end{frame}
+
+\section{Approach}
+
+\subsection{How to analyze it}
 
 \begin{frame}{Trust in testing}
   \begin{center}
@@ -150,6 +156,8 @@
     \small{Belive proof, not gut feel.}
   \end{center}
 \end{frame}
+
+\subsection{Measure}
 
 \begin{frame}{What to measure}
   \begin{itemize}
@@ -203,7 +211,157 @@
   \end{itemize}
 \end{frame}
 
+\begin{frame}{Remember...}
+  \begin{center}
+    \large{Round pegs for round holes.}\quad\\
+    \quad\\
+    \small{Use appropriate tools. Configure em correctly with least possible overhead.}
+  \end{center}
+\end{frame}
 
+\subsection{Fix}
+
+\begin{frame}{How to carry out fixes}
+  \begin{itemize}
+  \item Understand libraries: read fine print in documentation, or better yet, read code.
+    \pause
+  \item Be mechanical.
+    \pause
+  \item Use exhaggerated load to maginify the problem.
+    \pause
+  \item Use the same load profile to test your fix.
+    \pause
+  \item Be rigorous.
+    \pause
+  \item Mob pair on complicated fixes, especially fixes involving data mutation across threads.
+    \pause
+  \item Attack one and only one problem.
+    \pause
+  \item Having said all that, correctness always comes first.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Remember...}
+  \begin{center}
+    \large{Requires mechanical approach}\quad\\
+    \quad\\
+    \small{Attack worst problem first}\quad\\
+    \quad\\
+    \large{Reason every fix}\quad\\
+    \quad\\
+    \small{Reasoning is of paramount importance in multithreaded app}\quad\\
+    \quad\\
+    \large{Do one fix at a time}\quad\\
+    \quad\\
+    \small{Allows easy reasoning and verification, can be reverted}\quad\\
+    \quad\\
+    \large{Prefer correctness over performance}
+  \end{center}
+\end{frame}
+
+\section{Nature of fixes}
+
+\subsection{Synchronization}
+
+\begin{frame}{Lock granularity and lockless}
+  \begin{itemize}
+  \item When you fix lock contention somewhere, ensure it hasn't moved elsewhere, making overall performance worse.
+    \pause
+  \item More than one shared variable mandates synchronization usually, watch out!
+    \pause
+  \item Atomic operations and globaly unique objects(like interned symbols) are your friends.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Remember...}
+  \begin{center}
+    \large{Jumps places, unlike functional bugs}\quad\\
+    \quad\\
+    \small{Look beyond local impact of a fix}
+  \end{center}
+\end{frame}
+
+\subsection{GC}
+
+\begin{frame}{Garbage Collection}
+  \begin{itemize}
+  \item When you hear unresponsiveness is intermittent, be alarmed!
+    \begin{itemize}
+    \item It probably is GC
+    \item It is likely not easy to fix
+    \item Root cause may be you or a library
+    \end{itemize}
+    \pause
+  \item Scan GC logs
+    \pause
+  \item Profile to see if majority of allocations are from just a handful of calls
+    \begin{itemize}
+      \item If its several calls with each contributing very little to the pie, don't even try fixing it.
+    \end{itemize}
+    \pause
+  \item Understand GC ergonomics and each algorithm(if you have alternatives) in detail.
+  \item Tweek your max/min permitted allocation judiciously, malloc/free are expensive system calls.
+  \end{itemize}
+\end{frame}
+
+\subsection{DB}
+
+\begin{frame}{SQL Database}
+  \begin{itemize}
+  \item Optimize connection pool size.
+    \begin{itemize}
+    \item Expand is very expensive.
+    \item Is dispatched on caller thread(unless your connection pool is super-human).
+    \end{itemize}
+    \pause
+  \item Watch out for slow queries, it can snowball. 
+    \pause
+  \item Understand your DB settings, MVCC, table-locking scenarios, row-locking scenarios, transaction isolation tradeoffs.
+    \pause
+  \item Contd...
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{SQL Database contd...}
+  \begin{itemize}
+  \item Explain and Analyze are your friends.
+    \pause
+  \item Understanding implications of file-system IO helps realize table scans can be horrible
+    \begin{itemize}
+    \item DB runs with fixed page cache.
+    \item Table scan can wipe it all cold.
+    \item Use indexes to avoid table scan.
+    \item Indexes are order sensitive.
+    \item Tweek inner queries to reduce selectivity.
+    \end{itemize}
+    \pause
+  \item Every DB may be subtly different(joins can be more expensive than materialzed views(if you have em))
+    \pause
+  \item Denormalization can help crack tough nuts.
+  \end{itemize}
+\end{frame}
+
+\subsection{Thrashing}
+
+\begin{frame}{Context Switch Thrashing}
+  \begin{itemize}
+  \item Too few cores, too many processes will obviously hurt.
+    \pause
+  \item Too many locks will cause too many sleeps, hence too much ctx switching.
+    \pause
+  \item Ctx switch may schedule a different process, causing CPU caches to get cold.
+    \pause
+  \item Too frequent IO will cause io-wait, hence switch.
+    \begin{itemize}
+    \item Use of swap can completely kill performance. Swap is for emergency, not for regular usage.
+    \item Over logging can hurt, be careful!
+    \item Concept of buffered IO exists for a reason, use it!
+    \item Use memory mapped IO if it makes sense.
+    \end{itemize}
+    \pause
+  \item Assigning very low max memory limit can cause frequent GCs, allocate enough memory so its your functional thread that works and not GC threads.
+  \end{itemize}
+\end{frame}
 
 
 %% \begin{frame}
